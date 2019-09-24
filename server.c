@@ -14,6 +14,7 @@ int main (int argc, char** argv){
     socklen_t addr_len;
     int tid_selection;
     struct sockaddr_in server;
+    struct timeval timeout;
     //default is 8080, but will be replaced with user input
     int port = 8080;
     if(argc == 3){
@@ -75,4 +76,19 @@ int main (int argc, char** argv){
         printf("Could not bind socket to server.\n");
         return 0;
     }
+    //set timeout
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+
+    setsockopt(child_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    
+    if(op_code == 1){
+        //RRQ
+        
+    }
+    if(op_code == 2){
+        //WRQ
+    }
+    
+
 }
