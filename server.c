@@ -22,87 +22,77 @@
 #include <stdbool.h>
 #include "unpv13e/lib/unp.h"
 
+void read_data(char* buffer, int child_sock, sockaddr_in* child_server)
+{
+	FILE* fp;
+	unsigned short* op_pointer;
+	int block = 0;
+	int done = 0;
+	ssize_t data_size;
+	int no_data = 0;
+	char r_buffer[517];
 
-void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
-    int tid = ntohs(sock_info -> sin_port);
-    unsigned short* op_pointer = (unsigned short*)buffer;
-    char file[256];
-    FILE* fp;
-    socklen_t addr_len;
-    char last_packet[517];
-    int last_packet_size = 0;
-    ssize_t data_len;
-    int timeout = 0;
-    
-    strcpy(file, buffer+2);
-    fp = fopen(file, "w");
-    //ack packet
-    *op_pointer = htons(4);
-    *(op_pointer + 1) = htons(0);
-    
-    for(int a = 0; a < 4; a++){
-        last_packet[a] = buffer[a];
-    }
-    last_packet_size = 4;
-    
-    sendto(socket, buffer, 4, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
-    
-    bool more_packet = true;
-    
-    while(more_packet){
-        data_len = recvfrom(socket, buffer, 517, 0, (struct sockaddr*) sock_info, &addr_len);
-        if(data_len < 0 && errno == EWOULDBLOCK){
-            timeout++;
-            if(timeout >= 10){
-                printf("Connection timed out.\n");
-                break;
-            }
-            //try resending the last packet
-            for(int a = 0; a < 517; a++){
-                buffer[a] = last_packet[a];
-            }
-            sendto(socket, buffer, last_packet_size, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
-            continue;
-        }
-        //check tid
-        if(ntohs(sock_info -> sin_port) != tid){
-            *op_pointer = htons(5);
-            *(op_pointer + 1) = htons(5);
-            *(buffer + 4) = 0;
-            sendto(socket, buffer, 5, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
-            continue;
-        }
-        timeout = 0;
-        
-        if(ntohs(*op_pointer) != 3){
-            if(ntohs(*op_pointer) == 2){
-                //try resending the last packet
-                for(int a = 0; a < 517; a++){
-                    buffer[a] = last_packet[a];
-                }
-                sendto(socket, buffer, last_packet_size, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
-            }
-            continue;
-        }
-        
-        buffer[data_len] = '\0';
-        //last packet
-        if(data_len < 516){
-            more_packet = false;
-        }
-        //ack
-        *op_pointer = htons(4);
-        *(op_pointer + 1) = htons(0);
-        
-        for(int a = 0; a < 4; a++){
-            last_packet[a] = buffer[a];
-        }
-        last_packet_size = 4;
-        
-        sendto(socket, buffer, 4, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
-        
-    }
-    fclose(fp);
+
+	op_pointer = (unsigned short*)buffer;
+	char filename[256];
+	strcpy(filename, buffer + 2);
+	fp = open(filename, 'r');
+
+	if (fp == NULL)
+	{
+		*op_pointer = htons(5);
+		*(op_pointer + 1) = htons(1);
+		*(op_pointer + 2) = htons(0);
+		sendto(child_sock, buffer, 5, 0, (struct sockaddr*) child_server, sizeof(*sock_info));
+		return;
+	}
+
+	/**op_pointer = htons(4);
+	*(op_pointer + 1) = htons(block);
+	block++;
+	sendto(child_sock, buffer, 4, 0, (struct sockaddr*) child_server, sizeof(*sock_info));*/
+
+	while (!done)
+	{
+		data_size = recvfrom(sock, buffer, 517, 0, &client, &addr_len);
+		if (data_size < 0)
+		{
+			no_data++;
+			if (no_data == 10)
+		}
+		*op_pointer = htons(3);
+		*(op_pointer + 1) = htons(block);
+		block++;
+		char* buffer_ptr = buffer + 4;
+		int i = 0;
+		while (1)
+		{
+			if (feof(fp)) {
+				done = 1;
+				break;
+			}
+			if (i == 512) {break;}
+			*buffer_ptr = fgetc(fp);
+			buffer_ptr++;
+			i++;
+		}
+		*(buffer_ptr) = '\0';
+
+		sendto(child_sock, buffer, i + 5, 0, (struct sockaddr*) child_server, sizeof(*sock_info));
+
+		no_data = 0;
+		while (1)
+		{
+			data_size = recvfrom(sock, r_buffer, 517, 0, &client, &addr_len);
+			if (!data_size < 0) {break;}
+			no_data++;
+			sendto(child_sock, buffer, i + 5, 0, (struct sockaddr*) child_server, sizeof(*sock_info));
+			if (no_data == 10) {
+				done = 1;
+				break;
+			}
+		}
+	}
 }
 
 int main (int argc, char** argv){
@@ -111,6 +101,7 @@ int main (int argc, char** argv){
     int tid_selection;
     struct sockaddr_in server;
     struct timeval timeout;
+    char* buffer = calloc(517, sizeof(char));
     //default is 8080, but will be replaced with user input
     int port = 8080;
     char* buffer;
@@ -146,15 +137,14 @@ int main (int argc, char** argv){
         op_pointer = (unsigned short*)buffer;
         op_code = ntohs(*op_pointer);
         
-            if(fork() == 0){
-                //child go to handle request
-                close(sock);
-                break;
-            }
-            else{
-                tid_selection--;
-            }
-        
+        if(fork() == 0){
+            //child go to handle request
+            close(sock);
+            break;
+        }
+        else{
+            tid_selection--;
+        }
     }
     struct sockaddr_in child_server;
     int tid = tid_selection;
@@ -179,7 +169,7 @@ int main (int argc, char** argv){
     setsockopt(child_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     
     if(op_code == 1){
-        //RRQ
+        read_data(buffer, child_sock, child_server);
         
     }
     if(op_code == 2){
