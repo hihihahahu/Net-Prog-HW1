@@ -179,6 +179,7 @@ int main (int argc, char** argv){
     int tid_selection;
     struct sockaddr_in server;
     struct timeval timeout;
+    char* buffer = calloc(517, sizeof(char));
     //default is 8080, but will be replaced with user input
     int port = 8080;
     char* buffer;
