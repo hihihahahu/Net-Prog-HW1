@@ -114,6 +114,7 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
     while(more_packet){
         //printf("gg");
         data_len = recvfrom(socket, buffer, 517, 0, (struct sockaddr*) sock_info, &addr_len);
+        printf("block: %d\n", (unsigned short)*(buffer+2));
         if(data_len < 0 && errno == EWOULDBLOCK){
             timeout++;
             if(timeout >= 10){
@@ -136,7 +137,7 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
             continue;
         }
         timeout = 0;
-        
+        printf("%ld\n", data_len);
         if(ntohs(*op_pointer) != 3){
             if(ntohs(*op_pointer) == 2){
                 //try resending the last packet
@@ -149,7 +150,7 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
         }
         
         buffer[data_len] = '\0';
-        fprintf(fp, "%s\n", buffer+4);
+        fprintf(fp, "%s", buffer+4);
         //last packet
         if(data_len < 516){
             more_packet = false;
@@ -163,7 +164,7 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
         }
         last_packet_size = 4;
         
-        sendto(socket, buffer, 4, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
+        printf("ack: %ld\n", sendto(socket, buffer, 4, 0, (struct sockaddr*) sock_info, sizeof(*sock_info)));
         
     }
     printf("write finished.\n");
