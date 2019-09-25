@@ -95,7 +95,7 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
     int last_packet_size = 0;
     ssize_t data_len;
     int timeout = 0;
-    
+    int block = 0;
     strcpy(file, buffer+2);
     fp = fopen(file, "w");
     //ack packet
@@ -151,13 +151,14 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
         
         buffer[data_len] = '\0';
         fprintf(fp, "%s", buffer+4);
+        block++;
         //last packet
         if(data_len < 516){
             more_packet = false;
         }
         //ack
         *op_pointer = htons(4);
-        *(op_pointer + 1) = htons(0);
+        *(op_pointer + 1) = htons(block);
         
         for(int a = 0; a < 4; a++){
             last_packet[a] = buffer[a];
