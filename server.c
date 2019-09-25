@@ -118,6 +118,7 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
     bool more_packet = true;
     
     while(more_packet){
+        //printf("gg");
         data_len = recvfrom(socket, buffer, 517, 0, (struct sockaddr*) sock_info, &addr_len);
         if(data_len < 0 && errno == EWOULDBLOCK){
             timeout++;
@@ -171,6 +172,7 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
         sendto(socket, buffer, 4, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
         
     }
+    printf("write finished.\n");
     fclose(fp);
 }
 
