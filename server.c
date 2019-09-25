@@ -32,13 +32,18 @@ void read_data(char* buffer, int child_sock, struct sockaddr_in* child_server)
     ssize_t data_size;
     int no_data = 0;
     char r_buffer[517];
-    socklen_t addr_len;
+    char new_buffer[517];
+    socklen_t addr_len = sizeof(*child_server);
+    op_pointer = (unsigned short*)r_buffer;
+    *op_pointer = htons(4);
+    *op_pointer = htons(block);
+    block++;
+    sendto(child_sock, r_buffer, 4, 0, (struct sockaddr*) child_server, sizeof(*child_server));
 
     op_pointer = (unsigned short*)buffer;
     char filename[256];
     strcpy(filename, buffer + 2);
     fp = fopen(filename, "r");
-
     if (fp == NULL)
     {
         *op_pointer = htons(5);
@@ -48,46 +53,35 @@ void read_data(char* buffer, int child_sock, struct sockaddr_in* child_server)
         return;
     }
 
-    /**op_pointer = htons(4);
-    *(op_pointer + 1) = htons(block);
-    block++;
-    sendto(child_sock, buffer, 4, 0, (struct sockaddr*) child_server, sizeof(*sock_info));*/
 
+    op_pointer = (unsigned short*)new_buffer;
     while (!done)
     {
         *op_pointer = htons(3);
         *(op_pointer + 1) = htons(block);
-        block++;
-        char* buffer_ptr = buffer + 4;
         int i = 0;
-        while (1)
-        {
-            if (feof(fp)) {
-                done = 1;
-                break;
-            }
-            if (i == 512) {break;}
-            *buffer_ptr = fgetc(fp);
-            buffer_ptr++;
-            i++;
-        }
-        *(buffer_ptr) = '\0';
+        int num_get = fread(new_buffer + 4, sizeof(char), 512, fp);
+        if (num_get < 512) {done = 1;}
 
-        sendto(child_sock, buffer, i + 5, 0, (struct sockaddr*) child_server, sizeof(*child_server));
+        printf("buffer: %d\n", new_buffer[1]);
+        printf("result: %ld\n", sendto(child_sock, new_buffer, num_get + 4, 0, (struct sockaddr*) child_server, sizeof(*child_server)));
+        block++;
 
-        no_data = 0;
         while (1)
         {
             data_size = recvfrom(child_sock, r_buffer, 517, 0, (struct sockaddr*) child_server, &addr_len);
             if (!(data_size < 0)) {break;}
             no_data++;
-            sendto(child_sock, buffer, i + 5, 0, (struct sockaddr*) child_server, sizeof(child_server));
+            sendto(child_sock, new_buffer, num_get + 4, 0, (struct sockaddr*) child_server, sizeof(*child_server));
             if (no_data == 10) {
                 done = 1;
                 break;
             }
         }
     }
+    fclose(fp);
+    close(child_sock);
+    exit(0);
 }
 
 
@@ -239,6 +233,13 @@ int main (int argc, char** argv){
         }
     }
 
+    struct sockaddr_in client;
+    //unsigned short block_num;
+    unsigned short* op_pointer;
+    recvfrom(sock, buffer, 517, 0, (struct sockaddr*) &client, &addr_len);
+    op_pointer = (unsigned short*)buffer;
+    op_code = ntohs(*op_pointer);
+
     struct sockaddr_in child_server;
     int tid = tid_selection;
     //tid_selection--;
@@ -277,6 +278,6 @@ int main (int argc, char** argv){
         write_data(child_sock, &server, buffer);
     }
     close(child_sock);
+    exit(0);
     return 0;
-
 }
