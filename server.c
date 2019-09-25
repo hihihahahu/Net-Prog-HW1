@@ -193,9 +193,6 @@ int main (int argc, char** argv){
         printf("Number of arguments is not 3.\n");
         return 0;
     }
-    if(tid_selection == port){
-        tid_selection--;
-    }
     printf("port range (input): %d to %d.\n", atoi(argv[1]), atoi(argv[2]));
     printf("port range (saved): %d to %d.\n", port, tid_selection);
     addr_len = sizeof(server);
@@ -214,17 +211,19 @@ int main (int argc, char** argv){
         return 0;
     }
     getsockname(sock, (struct sockaddr *) &server, &addr_len);
-    printf("%d\n", addr_len);
+    //printf("%d\n", addr_len);
     int count = 0;
-    bool done = false;
+    //bool done = false;
     //int pid = getpid();
     unsigned short op_code;
-    while(!done){
+    //printf("%s\n", inet_ntoa(server.sin_addr));
+    while(1){
+        printf("waiting\n");
         count++;
-        struct sockaddr_in client;
+        //struct sockaddr_in client;
         //unsigned short block_num;
         unsigned short* op_pointer;
-        recvfrom(sock, buffer, 517, 0, (struct sockaddr*) &client, &addr_len);
+        recvfrom(sock, buffer, 517, 0, (struct sockaddr*) &server, &addr_len);
         op_pointer = (unsigned short*)buffer;
         op_code = ntohs(*op_pointer);
         if(fork() == 0){
@@ -234,7 +233,7 @@ int main (int argc, char** argv){
             break;
         }
         else{
-            tid_selection++;
+            tid_selection--;
         }
     }
 
@@ -243,14 +242,15 @@ int main (int argc, char** argv){
     //tid_selection--;
     int child_sock;
     printf("parent port: %d, tid: %d\n", port, tid);
+    printf("op_code: %d\n", op_code);
     addr_len = sizeof(child_server);
     bzero(&child_server, sizeof(struct sockaddr_in));
     //tid_selection--;
-    child_server.sin_family = PF_INET;
+    child_server.sin_family = AF_INET;
     child_server.sin_port = htons(tid);
     child_server.sin_addr.s_addr = htonl(INADDR_ANY);
     
-    if((child_sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0){
+    if((child_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0){
         printf("Could not create socket (child).\n");
         return 0;
     }
@@ -266,10 +266,12 @@ int main (int argc, char** argv){
     
     if(op_code == 1){
         //RRQ
+        printf("RRQ\n");
         read_data(buffer, child_sock, &server);
     }
     if(op_code == 2){
         //WRQ
+        printf("WRQ\n");
         write_data(child_sock, &server, buffer);
     }
     close(child_sock);
