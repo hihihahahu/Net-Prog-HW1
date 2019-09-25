@@ -21,7 +21,7 @@
 #include <time.h>
 #include <stdbool.h>
  
-#include "unp.h"
+//#include "unp.h"
 
 void read_data(char* buffer, int child_sock, struct sockaddr_in* child_server)
 {
@@ -179,7 +179,7 @@ int main (int argc, char** argv){
     int tid_selection;
     struct sockaddr_in server;
     struct timeval timeout;
-    char* buffer = calloc(517, sizeof(char));
+    //char* buffer = calloc(517, sizeof(char));
     //default is 8080, but will be replaced with user input
     int port = 8080;
     char* buffer;
@@ -195,6 +195,8 @@ int main (int argc, char** argv){
     if(tid_selection == port){
         tid_selection--;
     }
+    printf("port range (input): %d to %d.\n", atoi(argv[1]), atoi(argv[2]));
+    printf("port range (saved): %d to %d.\n", port, tid_selection);
     addr_len = sizeof(server);
     bzero(&server, sizeof(struct sockaddr_in));
     
