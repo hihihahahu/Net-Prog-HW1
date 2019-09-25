@@ -137,7 +137,7 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
             continue;
         }
         timeout = 0;
-        printf("%ld\n", data_len);
+        printf("%ld\n", data_len - 4);
         if(ntohs(*op_pointer) != 3){
             if(ntohs(*op_pointer) == 2){
                 //try resending the last packet
@@ -149,13 +149,19 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
             continue;
         }
         
-        buffer[data_len] = '\0';
-        fprintf(fp, "%s", buffer+4);
-        block++;
+        
         //last packet
         if(data_len < 516){
             more_packet = false;
         }
+        if(data_len - 4 > 0){
+            buffer[data_len] = '\0';
+            fprintf(fp, "%s", buffer+4);
+        }
+        
+        
+        block++;
+
         //ack
         *op_pointer = htons(4);
         *(op_pointer + 1) = htons(block);
