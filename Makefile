@@ -1,2 +1,2 @@
 tftp:
-	gcc -o tftp.out server.c 
+	gcc -o tftp.out server.c

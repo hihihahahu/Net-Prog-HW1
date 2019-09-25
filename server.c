@@ -154,6 +154,7 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
         }
         
         buffer[data_len] = '\0';
+        fprintf(fp, "%s\n", buffer+4);
         //last packet
         if(data_len < 516){
             more_packet = false;
@@ -212,41 +213,44 @@ int main (int argc, char** argv){
         printf("Could not bind socket to server (parent).\n");
         return 0;
     }
-    
+    getsockname(sock, (struct sockaddr *) &server, &addr_len);
+    printf("%d\n", addr_len);
+    int count = 0;
     bool done = false;
     //int pid = getpid();
     unsigned short op_code;
     while(!done){
+        count++;
         struct sockaddr_in client;
         //unsigned short block_num;
         unsigned short* op_pointer;
         recvfrom(sock, buffer, 517, 0, (struct sockaddr*) &client, &addr_len);
         op_pointer = (unsigned short*)buffer;
         op_code = ntohs(*op_pointer);
-
-            if(fork() == 0){
-                //child go to handle request
-                close(sock);
-                break;
-            }
-            else{
-                tid_selection--;
-            }
-        
+        if(fork() == 0){
+            printf("child #%d\n", count);
+            //child go to handle request
+            close(sock);
+            break;
+        }
+        else{
+            tid_selection++;
+        }
     }
 
     struct sockaddr_in child_server;
     int tid = tid_selection;
+    //tid_selection--;
     int child_sock;
     printf("parent port: %d, tid: %d\n", port, tid);
     addr_len = sizeof(child_server);
     bzero(&child_server, sizeof(struct sockaddr_in));
     //tid_selection--;
-    child_server.sin_family = AF_INET;
+    child_server.sin_family = PF_INET;
     child_server.sin_port = htons(tid);
     child_server.sin_addr.s_addr = htonl(INADDR_ANY);
     
-    if((child_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0){
+    if((child_sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0){
         printf("Could not create socket (child).\n");
         return 0;
     }
