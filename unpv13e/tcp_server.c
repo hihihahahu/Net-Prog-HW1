@@ -17,6 +17,9 @@ int main(){
     struct timeval timeout = {0, 3};
 
     struct sockaddr_in server, client;
+    struct timeval tv;
+    
+    
     sock = socket(AF_INET, SOCK_STREAM, 0);
     printf("Please enter a number (this number + 9877 will be the port which this server listens to): ");
     int port;
@@ -88,8 +91,6 @@ int main(){
             
             
         }
-        
-        
     }
     return 0;
 }
