@@ -69,6 +69,9 @@ int main(){
                 write(client_connection, str, a);
             }
             else if(feof(stdin)){
+                str[0] = 0;
+                str[1] = 0;
+                write(client_connection, str, 2);
                 printf("Shutting down due to EOF.\n");
                 close(sock);
                 close(client_connection);
