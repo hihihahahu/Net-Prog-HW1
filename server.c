@@ -34,11 +34,7 @@ void read_data(char* buffer, int child_sock, struct sockaddr_in* child_server)
     char r_buffer[517];
     char new_buffer[517];
     socklen_t addr_len = sizeof(*child_server);
-    op_pointer = (unsigned short*)r_buffer;
-    *op_pointer = htons(4);
-    *op_pointer = htons(block);
     block++;
-    sendto(child_sock, r_buffer, 4, 0, (struct sockaddr*) child_server, sizeof(*child_server));
 
     op_pointer = (unsigned short*)buffer;
     char filename[256];
@@ -92,7 +88,6 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
     FILE* fp;
     socklen_t addr_len;
     char last_packet[517];
-    int last_packet_size = 0;
     ssize_t data_len;
     int timeout = 0;
     int block = 0;
@@ -105,7 +100,6 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
     for(int a = 0; a < 4; a++){
         last_packet[a] = buffer[a];
     }
-    last_packet_size = 4;
     
     sendto(socket, buffer, 4, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
     
@@ -122,32 +116,12 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
                 break;
             }
             //try resending the last packet
-            for(int a = 0; a < 517; a++){
-                buffer[a] = last_packet[a];
-            }
-            sendto(socket, buffer, last_packet_size, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
+            sendto(socket, last_packet, 4, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
             continue;
         }
         //check tid
-        if(ntohs(sock_info -> sin_port) != tid){
-            *op_pointer = htons(5);
-            *(op_pointer + 1) = htons(5);
-            *(buffer + 4) = 0;
-            sendto(socket, buffer, 5, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
-            continue;
-        }
         timeout = 0;
         printf("%ld\n", data_len - 4);
-        if(ntohs(*op_pointer) != 3){
-            if(ntohs(*op_pointer) == 2){
-                //try resending the last packet
-                for(int a = 0; a < 517; a++){
-                    buffer[a] = last_packet[a];
-                }
-                sendto(socket, buffer, last_packet_size, 0, (struct sockaddr*) sock_info, sizeof(*sock_info));
-            }
-            continue;
-        }
         
         
         //last packet
@@ -169,7 +143,6 @@ void write_data(int socket, struct sockaddr_in* sock_info, char* buffer){
         for(int a = 0; a < 4; a++){
             last_packet[a] = buffer[a];
         }
-        last_packet_size = 4;
         
         printf("ack: %ld\n", sendto(socket, buffer, 4, 0, (struct sockaddr*) sock_info, sizeof(*sock_info)));
         
