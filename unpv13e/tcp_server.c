@@ -12,7 +12,11 @@
 int main(){
 	int a;
     int sock;
+    fd_set fdset;
     struct sockaddr_in server, client;
+    struct timeval tv;
+    
+    
     sock = socket(AF_INET, SOCK_STREAM, 0);
     printf("Please enter a number (this number + 9877 will be the port which this server listens to): ");
     int port;
@@ -37,7 +41,12 @@ int main(){
     }
     printf("Listening on port %d.\n", port);
     bool quit = false;
-
+    
+    FD_ZERO(&fdset);
+    FD_SET(stdin, &fdset);
+    tv.tv_sec = 0;
+    tv.tv_usec = 10000;
+    
     while(!quit){
         printf("Waiting for connection.\n");
         int client_connection;
@@ -50,10 +59,11 @@ int main(){
                 printf("Client disconnected.\n");
                 break;
             }
-            
-            if(scanf("%s", str) > 0){
+            select(stdin + 1, &fdset, NULL, NULL, &tv);
+            if(FD_ISSET(stdin, &fdset)){
             	//printf("114514\n");
-            	a = strlen(str);
+                scanf("%s", str);
+                a = strlen(str);
                 str[a] = '\0';
                 //printf("a = %d\n", a);
                 write(client_connection, str, a);
@@ -65,14 +75,7 @@ int main(){
                 quit = true;
                 break;
             }
-            else{
-                printf("stdin error.\n");
-                return 0;
-            }
-            
         }
-        
-        
     }
     return 0;
 }
