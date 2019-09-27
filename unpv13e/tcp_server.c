@@ -71,7 +71,7 @@ int main(){
             select(1, &fdset, NULL, NULL, &timeout);
 
             if (FD_ISSET(0, &fdset)){
-                    printf("fuck you\n");
+                    //printf("fuck you\n");
                     if((a = scanf("%s", str)) > 0){
                     //printf("114514\n");
                     a = strlen(str);
