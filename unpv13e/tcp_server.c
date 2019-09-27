@@ -51,10 +51,12 @@ int main(){
                 break;
             }
             
-            if((a = scanf("%s", str)) > 0){
+            if(scanf("%s", str) > 0){
             	//printf("114514\n");
+            	a = strlen(str);
                 str[a] = '\0';
-                write(client_connection, str, a+1);
+                //printf("a = %d\n", a);
+                write(client_connection, str, a);
             }
             else if(feof(stdin)){
                 printf("Shutting down due to EOF.\n");
