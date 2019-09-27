@@ -1,46 +1,61 @@
-#include "lib/unp.h"
 #include <stdio.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <time.h>
+#include <stdbool.h>
 
-int count = 0;
+int count;
 
 void handler(int sig)
 {
 	count--;
 }
 
-void dg_client(int sockfd, SA *pservaddr, socklen_t servlen, int port)
+void str_client(FILE *fp, int sockfd, int port)
 {
-	int				n;
-	char			line[MAXLINE + 1] = "114514";
+	ssize_t		n;
+	char		buf[MAXLINE];
+	fd_set fdset;
+	struct timeval timeout = {0, 3};
 
-	printf("%ld\n",sendto(sockfd, line, 6, 0, pservaddr, servlen));
-	while (1) {
-		n = recvfrom(sockfd, line, MAXLINE, 0, NULL, NULL);
-		if (line[0] < 0)
+	while (1)
+	{
+		FD_ZERO(&fdset);
+		FD_SET(sockfd, &fdset);
+		timeout.tv_sec = 3;
+		timeout.tv_usec = 0;
+		if (select(sockfd + 1, &fdset, NULL, NULL, &timeout) > 0)
 		{
-			printf(">Server on %d closed\n", port);
-			return;
+			exit(1);
 		}
-
-		sendto(sockfd, line, n, 0, pservaddr, servlen);
-
-		line[n] = 0;	/* null terminate */
-		printf(">%d %s", port, line);
+		if (FD_ISSET(sockfd, &fdset))
+		{
+			n = recvfrom(sockfd, buf, MAXLINE, 0, NULL, NULL);
+			buf[n] = 0;	/* null terminate */
+			printf(">%d %s", port, buf);
+		}
 	}
 }
 
-
 int main(int argc, char **argv)
 {
-	Signal(SIGCHLD, handler);
+	signal(SIGCHLD, handler);
 	int port;
 
-	int count = 0;
+	count = 0;
 
 	while (1)
 	{
 		fscanf(stdin, "%d", &port);
-		printf("114514\n");
 		if (count >= 5) {continue;}
 		count++;
 		if (fork() == 0) {break;}
@@ -49,15 +64,16 @@ int main(int argc, char **argv)
 	int					sockfd;
 	struct sockaddr_in	servaddr;
 
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
 	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(port);
-	inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
+	inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr);
 
+	connect(sockfd, (SA *) &servaddr, sizeof(servaddr));
 
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-
-	dg_client(sockfd, (SA *) &servaddr, sizeof(servaddr), port);
+	str_client(stdin, sockfd, port);		/* do it all */
 
 	exit(0);
 }
