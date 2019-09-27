@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include "lib/unp.h"
 
+
+
 int main(){
 	int a;
     int sock;
@@ -60,9 +62,9 @@ int main(){
             timeout.tv_sec = 0;
             timeout.tv_usec = 3;
             char str[513];
-            //printf("fuck you 2\n");
-            //printf("%ld\n", write(client_connection, str, 0));
-            if(write(client_connection, str, 0) < 0){
+            str[0] = '\0';
+            str[1] = '\0';
+            if(write(client_connection, str, 2) < 2){
                 printf("Client disconnected.\n");
                 break;
             }
@@ -81,7 +83,8 @@ int main(){
             else if(feof(stdin)){
                 str[0] = '\0';
                 str[1] = '\0';
-                write(client_connection, str, 2);
+                str[2] = '\0';
+                write(client_connection, str, 3);
                 printf("Shutting down due to EOF.\n");
                 close(sock);
                 close(client_connection);
