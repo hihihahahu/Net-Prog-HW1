@@ -6,6 +6,7 @@
 //
 
 #include <stdio.h>
+#include <stdbool.h>
 #include "lib/unp.h"
 
 int main(){
@@ -35,7 +36,9 @@ int main(){
         return 0;
     }
     printf("Listening on port %d.\n", port);
-    while(1){
+    bool quit = false;
+
+    while(!quit){
         printf("Waiting for connection.\n");
         int client_connection;
         socklen_t clilen = sizeof(client);
@@ -43,12 +46,22 @@ int main(){
         printf("Accepted connection.\n");
         while(1){
             char str[513];
+            if(write(client_connection, str, 0) < 0){
+                printf("Client disconnected.\n");
+                break;
+            }
+            
             if((a = scanf("%s", str)) > 0){
-            	printf("114514\n");
+            	//printf("114514\n");
                 str[a] = '\0';
-                printf("1919\n");
                 write(client_connection, str, a+1);
-                printf("810\n");
+            }
+            else if(feof(stdin)){
+                printf("Shutting down due to EOF.\n");
+                close(sock);
+                close(client_connection);
+                quit = true;
+                break;
             }
             else{
                 printf("stdin error.\n");
@@ -59,5 +72,5 @@ int main(){
         
         
     }
-
+    return 0;
 }
