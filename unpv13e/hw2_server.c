@@ -149,7 +149,7 @@ int main(int argc, char* argv[]){
                         player_count--;
                         continue;
                     }
-                     */
+                    */
                     if(has_username[a]){
                         
                         /*
@@ -159,11 +159,19 @@ int main(int argc, char* argv[]){
                          */
                         
                         
-                        read(player_fds[a], buffer, sizeof(buffer));
+                        if(read(player_fds[a], buffer, sizeof(buffer)) < 0){
+                            printf("Player %s disconnected.\n", usernames[a]);
+                            FD_CLR(player_fds[a], &fds);
+                            player_fds[a] = -1;
+                            slot_available[a] = true;
+                            has_username[a] = false;
+                            player_count--;
+                            continue;
+                        }
                         printf("User %s has guessed: %s\n", usernames[a], buffer);
                         char message[1024];
                         strcpy(message, "this is some message\n");
-                        message[strlen(message)] = '\0';
+                        //message[strlen(message)] = '\0';
                         write(player_fds[a], message, strlen(message) + 1);
                     }
                     else{
