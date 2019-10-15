@@ -46,6 +46,7 @@ int main(int argc, char* argv[]){
         strcpy(temp, "Username ");
         strcat(temp, username);
         strcat(temp, " is already taken, please enter a different username");
+        temp[strlen(temp)] = '\0';
         if(strcmp(server_response, "Welcome to Guess the Word, please enter your username.") == 0 || strcmp(server_response, temp) == 0){
             fgets(server_response, sizeof(server_response), stdin);
             int index = 0;
@@ -61,7 +62,11 @@ int main(int argc, char* argv[]){
             username_len = strlen(username);
             write(sockfd, server_response, strlen(server_response) + 1);
         }
-        else if(strcmp(server_response), "GGWP"){
+        else if(strcmp((server_response), "GGWP") == 0){
+            free(temp);
+            break;
+        }
+        else if(strcmp((server_response), "Too many players atm.") == 0){
             free(temp);
             break;
         }
