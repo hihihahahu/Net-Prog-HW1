@@ -76,7 +76,7 @@ int main(int argc, char* argv[]){
             printf("Welcome message sent.\n");
             write(connfd, welcome_message, strlen(welcome_message) + 1);
             read(connfd, buffer, sizeof(buffer));
-            buffer[strlen(buffer)] = '\0';
+            buffer[strlen(buffer) - 1] = '\0';
             //check if username is used
             bool name_used = false;
             for(int a = 0; a < 5; a++){
@@ -108,10 +108,20 @@ int main(int argc, char* argv[]){
                         usernames[a][strlen(buffer)] = '\0';
                         has_username[a] = true;
                         char message[1025];
+                        char str[3];
+                        sprintf(str, "%d", player_count);
+                        str[strlen(str)] = '\0';
                         strcpy(message, "Let's start playing, ");
                         strcat(message, usernames[a]);
-                        strcat(message, "\n\0");
+                        strcat(message, "\nThere are ");
+                        strcat(message, str);
+                        strcat(message, " player(s) playing.\n");
+                        message[strlen(message)] = '\0';
                         write(connfd, message, strlen(message) + 1);
+                        //strcpy(prompt, "There are ");
+                        
+                        //write(player_fds[a], prompt, strlen(prompt) + 1);
+                        break;
                     }
                 }
             }
@@ -120,6 +130,7 @@ int main(int argc, char* argv[]){
                     if(slot_available[a]){
                         slot_available[a] = false;
                         player_fds[a] = connfd;
+                        break;
                     }
                 }
             }
@@ -128,14 +139,17 @@ int main(int argc, char* argv[]){
             if(!slot_available[a]){
                 if(FD_ISSET(player_fds[a], &fds)){
                     char recvline[MAXLINE];
+                    /*
                     if (Readline(player_fds[a], recvline, MAXLINE) == 0){
                         printf("Player %s disconnected.\n", usernames[a]);
                         FD_CLR(player_fds[a], &fds);
                         player_fds[a] = -1;
                         slot_available[a] = true;
                         has_username[a] = false;
+                        player_count--;
                         continue;
                     }
+                     */
                     if(has_username[a]){
                         
                         /*
@@ -143,7 +157,6 @@ int main(int argc, char* argv[]){
                          handle guesses here
                          
                          */
-                        
                         
                         
                         read(player_fds[a], buffer, sizeof(buffer));
@@ -181,10 +194,16 @@ int main(int argc, char* argv[]){
                             }
                             usernames[a][strlen(buffer)] = '\0';
                             has_username[a] = true;
-                            char message[1024];
+                            char message[1025];
+                            char str[3];
+                            sprintf(str, "%d", player_count);
+                            str[strlen(str)] = '\0';
                             strcpy(message, "Let's start playing, ");
                             strcat(message, usernames[a]);
-                            strcat(message, "\n\0");
+                            strcat(message, "\nThere are ");
+                            strcat(message, str);
+                            strcat(message, " player(s) playing.\n");
+                            message[strlen(message)] = '\0';
                             write(player_fds[a], message, strlen(message) + 1);
                         }
                     }

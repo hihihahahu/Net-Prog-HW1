@@ -14,13 +14,15 @@ int main(int argc, char* argv[]){
     //int addrlen;
     int port = atoi(argv[2]);
     
+    fd_set fds;
+    
     int username_len = 0;
     char* username;
     username = calloc(1025, sizeof(char));
     username[0] = '\0';
     
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-        printf("socket create failed");
+        printf("socket create failed\n");
         return 0;
     }
     
@@ -31,58 +33,64 @@ int main(int argc, char* argv[]){
     servaddr.sin_addr.s_addr = inet_addr(argv[1]);
     
     if(connect(sockfd, (struct sockaddr*)& servaddr, sizeof(servaddr)) < 0){
-        printf("connect failed");
+        printf("connect failed\n");
         return 0;
     }
     
-    char* server_response;
-    server_response = calloc(1025, sizeof(char));
+    char server_response[1025];
+    
+    FD_SET(sockfd, &fds);
     
     while(1){
-        read(sockfd, server_response, sizeof(server_response));
-        printf("%s\n", server_response);
-        char* temp;
-        temp = calloc(2049, sizeof(char));
-        strcpy(temp, "Username ");
-        strcat(temp, username);
-        strcat(temp, " is already taken, please enter a different username");
-        temp[strlen(temp)] = '\0';
-        if(strcmp(server_response, "Welcome to Guess the Word, please enter your username.") == 0 || strcmp(server_response, temp) == 0){
-            fgets(server_response, sizeof(server_response), stdin);
-            int index = 0;
-            while(index < strlen(server_response)){
-                //parse all uppercase letters
-                if(server_response[index] >= 'A' && server_response[index] <= 'Z'){
-                    server_response[index] = server_response[index] + ('a' - 'A');
+        select(sockfd + 1, &fds, NULL, NULL, NULL);
+        if(FD_ISSET(sockfd, &fds)){
+            read(sockfd, server_response, sizeof(server_response));
+            printf("%s\n", server_response);
+            char* temp;
+            temp = calloc(2049, sizeof(char));
+            strcpy(temp, "Username ");
+            strcat(temp, username);
+            strcat(temp, " is already taken, please enter a different username");
+            temp[strlen(temp)] = '\0';
+            if(strcmp(server_response, "Welcome to Guess the Word, please enter your username.") == 0 || strcmp(server_response, temp) == 0){
+                fgets(server_response, sizeof(server_response), stdin);
+                int index = 0;
+                while(index < strlen(server_response)){
+                    //parse all uppercase letters
+                    if(server_response[index] >= 'A' && server_response[index] <= 'Z'){
+                        server_response[index] = server_response[index] + ('a' - 'A');
+                    }
+                    index++;
                 }
-                index++;
+                server_response[strlen(server_response)] = '\0';
+                username = server_response;
+                username_len = strlen(username);
+                write(sockfd, server_response, strlen(server_response) + 1);
             }
-            server_response[strlen(server_response)] = '\0';
-            username = server_response;
-            username_len = strlen(username);
-            write(sockfd, server_response, strlen(server_response) + 1);
-        }
-        else if(strcmp((server_response), "GGWP") == 0){
-            free(temp);
-            break;
-        }
-        else if(strcmp((server_response), "Too many players atm.") == 0){
-            free(temp);
-            break;
-        }
-        else{
-            fgets(server_response, sizeof(server_response), stdin);
-            int index = 0;
-            while(index < strlen(server_response)){
-                //parse all uppercase letters
-                if(server_response[index] >= 'A' && server_response[index] <= 'Z'){
-                    server_response[index] = server_response[index] + ('a' - 'A');
+            else if(strcmp((server_response), "GGWP") == 0){
+                free(temp);
+                break;
+            }
+            else if(strcmp((server_response), "Too many players atm.") == 0){
+                free(temp);
+                break;
+            }
+            else{
+                fflush(stdin);
+                fgets(server_response, sizeof(server_response), stdin);
+                int index = 0;
+                while(index < strlen(server_response)){
+                    //parse all uppercase letters
+                    if(server_response[index] >= 'A' && server_response[index] <= 'Z'){
+                        server_response[index] = server_response[index] + ('a' - 'A');
+                    }
+                    index++;
                 }
-                index++;
+                server_response[strlen(server_response)] = '\0';
+                write(sockfd, server_response, strlen(server_response) + 1);
             }
-            server_response[strlen(server_response)] = '\0';
-            write(sockfd, server_response, strlen(server_response) + 1);
         }
+        
     }
     free(username);
     close(sockfd);
