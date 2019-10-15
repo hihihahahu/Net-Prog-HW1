@@ -1,1 +1,3 @@
-readme
+Finished by Yitao Yang (yangy23) & Jinyi Xie (xiej6)
+
+setsockopt() is used to set the timeout of socket operations (recvfrom in our case), the timeout is set to one second, because it's required that the last packet to be re-transmitted upon not receiving anything for 1 sec. An additional counter variable is used to count the number of timeouts. Upon 10 timeouts (which is a 10 second timeout), the server would disconnect. 
