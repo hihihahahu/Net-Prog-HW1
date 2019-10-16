@@ -9,6 +9,107 @@
 #include "lib/unp.h"
 #include <stdio.h>
 #include <stdbool.h>
+#include <ctype.h>
+
+struct match_number
+{ 
+   int correct;
+   int place_correct;
+};
+
+struct match_number word_match(char* secret, char* guess)
+{
+    struct match_number ans;
+    char a;
+    int g_length = strlen(guess);
+    int s_length = strlen(secret);
+    int used[s_length];
+    for (int i = 0; i < s_length; i++)
+    {
+        secret[i] = tolower(secret[i]);
+        used[i] = 0;
+    }
+    if (g_length != s_length + 1)
+    {
+        ans.correct = -1;
+        ans.place_correct = -1;
+        return ans;
+    }
+    ans.correct = 0;
+    ans.place_correct = 0;
+    if (guess[g_length - 1] == '\n')
+    {
+        guess[g_length - 1] = '\0';
+        g_length--;
+    }
+    for (int i = 0; i < s_length; i++)
+    {
+        if (secret[i] == guess[i]) {ans.place_correct++;}
+    }
+    for (int i = 0; i < g_length; i++)
+    {
+        for (int j = 0; j < s_length; j++)
+        {
+            if (guess[i] == secret[j] && used[j] == 0)
+            {
+                used[j] = 1;
+                ans.correct++;
+                break;
+            }
+        }
+    }
+    return ans;
+}
+
+int cmpfunc (const void * a, const void * b) {
+   return ( *(*(char**)a) - *(*(char**)b));
+}
+
+int dic_init(char* file_name, char***dic)
+{
+    int count = 0;
+    FILE* fp = fopen(file_name, "r");
+    char str[1025];
+    if (fp == NULL)
+    {
+        fprintf(stderr, "could not open file\n");
+        exit(1);
+    }
+    while (fgets(str, 1025, fp) != NULL)
+    {
+        count++;
+    }
+    rewind(fp);
+    *dic = (char**)calloc(count, sizeof(char*));
+    for (int i = 0; i < count; i++)
+    {
+        (*dic)[i] = (char*)calloc(1025, sizeof(char));
+        fgets((*dic)[i], 1025, fp);
+    }
+    fclose(fp);
+    qsort(*dic, count, sizeof(char*), cmpfunc);
+    return count;
+}
+
+char* get_secret(char** dic, int dic_size)
+{
+    char* secret = (char*)calloc(1025, sizeof(char));
+    char* tmp = dic[rand() % dic_size];
+    int l = strlen(secret);
+    int pos = 0;
+    while (1)
+    {
+        if (tmp[pos] == '\0' || tmp[pos] == '\n' || tmp[pos] - '0' < 0)
+        {
+            secret[pos] = '\0';
+            break;
+        }
+        secret[pos] = tmp[pos];
+        pos++;
+    }
+    printf("%d\n", strlen(secret));
+    return secret;
+}
 
 int main(int argc, char* argv[]){
     fd_set fds;
