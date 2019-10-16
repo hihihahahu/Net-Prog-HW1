@@ -75,8 +75,8 @@ int main(int argc, char* argv[]){
                 free(temp);
                 break;
             }
-            else{
-                fflush(stdin);
+            else if(strlen(server_response) > 0){
+                //fflush(stdin);
                 fgets(server_response, sizeof(server_response), stdin);
                 int index = 0;
                 while(index < strlen(server_response)){
