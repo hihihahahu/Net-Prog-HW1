@@ -175,7 +175,7 @@ int main(int argc, char* argv[]){
                         printf("User %s (%d) has guessed: %s\n", usernames[a], a, buffer);
                         char message[1024];
                         strcpy(message, "this is some message\n");
-                        message[strlen(message)] = '\0';
+                        //message[strlen(message)] = '\0';
                         write(player_fds[a], message, strlen(message) + 1);
                     }
                     else{
