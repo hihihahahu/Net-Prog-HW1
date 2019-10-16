@@ -12,7 +12,6 @@
 
 int main(int argc, char* argv[]){
     fd_set fds;
-    FD_ZERO(&fds);
     
     int listenfd;
     struct sockaddr_in servaddr, cliaddr;
@@ -44,19 +43,29 @@ int main(int argc, char* argv[]){
     
     bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr));
     listen(listenfd, 50);
-    FD_SET(listenfd, &fds);
+    //FD_SET(listenfd, &fds);
+    
     
     while(1){
+        //printf("Listening for new connections.\n");
+        FD_SET(listenfd, &fds);
         int max_playerfd = -1;
         for(int a = 0; a < 5; a++){
             if(!slot_available[a]){
                 if(player_fds[a] > max_playerfd){
                     max_playerfd = player_fds[a];
                 }
+                if(player_fds[a] > -1){
+                    FD_SET(player_fds[a], &fds);
+                }
             }
         }
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 5;
         int maxfd = max(max_playerfd, listenfd) + 1;
-        select(maxfd, &fds, NULL, NULL, NULL);
+        select(maxfd, &fds, NULL, NULL, &tv);
+        //printf("???\n");
         if(FD_ISSET(listenfd, &fds)){
             printf("New client detected.\n");
             //reads username
@@ -135,12 +144,15 @@ int main(int argc, char* argv[]){
                 }
             }
         }
+        //printf("checking player connection\n");
         for(int a = 0; a < 5; a++){
+            //printf("checking player %d\n", a);
             if(!slot_available[a]){
                 if(FD_ISSET(player_fds[a], &fds)){
-                    char recvline[MAXLINE];
-                    /*
-                    if (Readline(player_fds[a], recvline, MAXLINE) == 0){
+                    //char recvline[MAXLINE];
+                    int bytes_read = read(player_fds[a], buffer, sizeof(buffer));
+                    printf("%d\n", bytes_read);
+                    if (bytes_read == 0){
                         printf("Player %s disconnected.\n", usernames[a]);
                         FD_CLR(player_fds[a], &fds);
                         player_fds[a] = -1;
@@ -149,8 +161,8 @@ int main(int argc, char* argv[]){
                         player_count--;
                         continue;
                     }
-                     */
-                    if(has_username[a]){
+                    
+                    if(has_username[a] && bytes_read > 0){
                         
                         /*
                          
@@ -159,8 +171,8 @@ int main(int argc, char* argv[]){
                          */
                         
                         
-                        read(player_fds[a], buffer, sizeof(buffer));
-                        printf("User %s has guessed: %s\n", usernames[a], buffer);
+                        
+                        printf("User %s (%d) has guessed: %s\n", usernames[a], a, buffer);
                         char message[1024];
                         strcpy(message, "this is some message\n");
                         message[strlen(message)] = '\0';
@@ -170,9 +182,9 @@ int main(int argc, char* argv[]){
                         read(player_fds[a], buffer, sizeof(buffer));
                         buffer[strlen(buffer)] = '\0';
                         bool name_used = false;
-                        for(int a = 0; a < 5; a++){
-                            if(!slot_available[a]){
-                                if(strcmp(buffer, usernames[a]) == 0){
+                        for(int b = 0; b < 5; a++){
+                            if(!slot_available[b]){
+                                if(strcmp(buffer, usernames[b]) == 0){
                                     name_used = true;
                                     char message[1025];
                                     strcpy(message, "Username ");
