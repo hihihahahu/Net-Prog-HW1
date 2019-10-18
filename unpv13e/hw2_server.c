@@ -11,24 +11,32 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+//Struct that stores the matching of secret word and guessed word
 struct match_number
 { 
-   int correct;
-   int place_correct;
+   int correct; //Number of characters correct
+   int place_correct; //Number of charactres in correct place
 };
 
+//Compare the secret word and guessed word
+//secret is the secret word
+//guess is the guessed word
+//Return a match_number that stored the information
 struct match_number word_match(char* secret, char* guess)
 {
     struct match_number ans;
     char a;
     int g_length = strlen(guess);
     int s_length = strlen(secret);
+
+    //The array used indicates that whether the character in secret word at position i has been matched
     int used[s_length];
     for (int i = 0; i < s_length; i++)
     {
-        //secret[i] = tolower(secret[i]);
         used[i] = 0;
     }
+
+    //Invalid guess: different word length
     if (g_length != s_length)
     {
         ans.correct = -1;
@@ -37,15 +45,22 @@ struct match_number word_match(char* secret, char* guess)
     }
     ans.correct = 0;
     ans.place_correct = 0;
+
+    //Remove the '\n' character in the guessed word
     if (guess[g_length - 1] == '\n')
     {
         guess[g_length - 1] = '\0';
         g_length--;
     }
+
+    //Count for number of charactres in correct place
     for (int i = 0; i < s_length; i++)
     {
         if (tolower(secret[i]) == tolower(guess[i])) {ans.place_correct++;}
     }
+
+    //Count for number of charactres that is correct
+    //Match characters one by one
     for (int i = 0; i < g_length; i++)
     {
         for (int j = 0; j < s_length; j++)
@@ -61,28 +76,44 @@ struct match_number word_match(char* secret, char* guess)
     return ans;
 }
 
+//Compare function for qsort()
+//Not used in this version
 int cmpfunc (const void * a, const void * b) {
     const char ** a1 = (const char**) a;
     const char ** b1 = (const char**) b;
     return strcmp(*a1, *b1);
 }
 
+//The function that read in the dictionary from file
+//file_name is the name of the file
+//dic is the address of the dictionary
+//Return the size of the dictionary
 int dic_init(char* file_name, char***dic)
 {
     int count = 0;
     FILE* fp = fopen(file_name, "r");
     char str[1025];
+
+    //If file does not exist
     if (fp == NULL)
     {
         fprintf(stderr, "could not open file\n");
         exit(1);
     }
+
+    //Count the size of the dictionary
     while (fgets(str, 1025, fp) != NULL)
     {
         count++;
     }
+
+    //Go back to the beginning of the file
     rewind(fp);
+
+    //Dynamically allocate memory for the dictionary
     *dic = (char**)calloc(count, sizeof(char*));
+
+    //Read the dictionary from file
     for (int i = 0; i < count; i++)
     {
         (*dic)[i] = (char*)calloc(1025, sizeof(char));
@@ -93,12 +124,21 @@ int dic_init(char* file_name, char***dic)
     return count;
 }
 
+//Function that randomly generate a secret word
+//dic is the dictionary
+//dic_size is the size of the dictionary
+//Return the secret word selected
 char* get_secret(char** dic, int dic_size)
 {
+    //Dynamically allocate memory for the secret word
     char* secret = (char*)calloc(1025, sizeof(char));
+
+    //Randomly choose a word from dictionary
     char* tmp = dic[rand() % dic_size];
     int l = strlen(secret);
     int pos = 0;
+
+    //Copy and return the secret word.
     while (1)
     {
         if (tmp[pos] == '\0' || tmp[pos] == '\n' || tmp[pos] - '0' < 0)
