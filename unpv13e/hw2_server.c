@@ -408,7 +408,7 @@ int main(int argc, char* argv[]){
                         }
                         
                         //if guessed correctly, the game_over flag is marked as true
-                        
+                        //and get a new secret word
                         else if(result.place_correct == strlen(secret)){
                             sprintf(message, "%s has correctly guessed the word %s", usernames[a], secret);
                             free(secret);
