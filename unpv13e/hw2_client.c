@@ -39,13 +39,17 @@ int main(int argc, char* argv[]){
     
     char server_response[1025];
     
-    FD_SET(sockfd, &fds);
     
     while(1){
+        FD_SET(sockfd, &fds);
         select(sockfd + 1, &fds, NULL, NULL, NULL);
         if(FD_ISSET(sockfd, &fds)){
+            for(int a = 0; a < 1025; a++){
+                server_response[a] = '\0';
+            }
             read(sockfd, server_response, sizeof(server_response));
             printf("%s\n", server_response);
+            printf("G G\n");
             char* temp;
             temp = calloc(2049, sizeof(char));
             strcpy(temp, "Username ");
@@ -54,14 +58,8 @@ int main(int argc, char* argv[]){
             temp[strlen(temp)] = '\0';
             if(strcmp(server_response, "Welcome to Guess the Word, please enter your username.") == 0 || strcmp(server_response, temp) == 0){
                 fgets(server_response, sizeof(server_response), stdin);
-                int index = 0;
-                while(index < strlen(server_response)){
-                    //parse all uppercase letters
-                    if(server_response[index] >= 'A' && server_response[index] <= 'Z'){
-                        server_response[index] = server_response[index] + ('a' - 'A');
-                    }
-                    index++;
-                }
+                //int index = 0;
+                
                 server_response[strlen(server_response)] = '\0';
                 username = server_response;
                 username_len = strlen(username);
@@ -78,14 +76,8 @@ int main(int argc, char* argv[]){
             else if(strlen(server_response) > 0){
                 //fflush(stdin);
                 fgets(server_response, sizeof(server_response), stdin);
-                int index = 0;
-                while(index < strlen(server_response)){
-                    //parse all uppercase letters
-                    if(server_response[index] >= 'A' && server_response[index] <= 'Z'){
-                        server_response[index] = server_response[index] + ('a' - 'A');
-                    }
-                    index++;
-                }
+                //int index = 0;
+                
                 server_response[strlen(server_response)] = '\0';
                 write(sockfd, server_response, strlen(server_response) + 1);
             }

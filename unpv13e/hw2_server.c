@@ -5,8 +5,8 @@
 //  Created by borute on 10/15/19.
 //
 
-#include "hw2_server.h"
-#include "lib/unp.h"
+//#include "hw2_server.h"
+#include "unp.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <ctype.h>
@@ -26,10 +26,10 @@ struct match_number word_match(char* secret, char* guess)
     int used[s_length];
     for (int i = 0; i < s_length; i++)
     {
-        secret[i] = tolower(secret[i]);
+        //secret[i] = tolower(secret[i]);
         used[i] = 0;
     }
-    if (g_length != s_length + 1)
+    if (g_length != s_length)
     {
         ans.correct = -1;
         ans.place_correct = -1;
@@ -44,13 +44,13 @@ struct match_number word_match(char* secret, char* guess)
     }
     for (int i = 0; i < s_length; i++)
     {
-        if (secret[i] == guess[i]) {ans.place_correct++;}
+        if (tolower(secret[i]) == tolower(guess[i])) {ans.place_correct++;}
     }
     for (int i = 0; i < g_length; i++)
     {
         for (int j = 0; j < s_length; j++)
         {
-            if (guess[i] == secret[j] && used[j] == 0)
+            if (tolower(guess[i]) == tolower(secret[j]) && used[j] == 0)
             {
                 used[j] = 1;
                 ans.correct++;
@@ -62,7 +62,9 @@ struct match_number word_match(char* secret, char* guess)
 }
 
 int cmpfunc (const void * a, const void * b) {
-   return ( *(*(char**)a) - *(*(char**)b));
+    const char ** a1 = (const char**) a;
+    const char ** b1 = (const char**) b;
+    return strcmp(*a1, *b1);
 }
 
 int dic_init(char* file_name, char***dic)
@@ -87,7 +89,7 @@ int dic_init(char* file_name, char***dic)
         fgets((*dic)[i], 1025, fp);
     }
     fclose(fp);
-    qsort(*dic, count, sizeof(char*), cmpfunc);
+    //qsort(*dic, count, sizeof(char*), cmpfunc);
     return count;
 }
 
@@ -107,11 +109,19 @@ char* get_secret(char** dic, int dic_size)
         secret[pos] = tmp[pos];
         pos++;
     }
-    printf("%d\n", strlen(secret));
+    printf("%lu\n", strlen(secret));
     return secret;
 }
 
 int main(int argc, char* argv[]){
+    setvbuf( stdout, NULL, _IONBF, 0 );
+    srand(atoi(argv[1]));
+    char** dic;
+    int dic_size = dic_init(argv[3], &dic);
+    char* secret = get_secret(dic, dic_size);
+    
+    printf("The secret word is: %s\n", secret);
+    
     fd_set fds;
     
     int listenfd;
@@ -143,62 +153,74 @@ int main(int argc, char* argv[]){
     servaddr.sin_port = htons(atoi(argv[2]));
     
     bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr));
-    listen(listenfd, 50);
+    listen(listenfd, 10);
     //FD_SET(listenfd, &fds);
     
     
     while(1){
         //printf("Listening for new connections.\n");
+        //FD_ZERO(&fds);
         FD_SET(listenfd, &fds);
         int max_playerfd = -1;
         for(int a = 0; a < 5; a++){
-            if(!slot_available[a]){
-                if(player_fds[a] > max_playerfd){
-                    max_playerfd = player_fds[a];
-                }
                 if(player_fds[a] > -1){
                     FD_SET(player_fds[a], &fds);
+                    if(player_fds[a] > max_playerfd){
+                        max_playerfd = player_fds[a];
+                    }
                 }
-            }
         }
         struct timeval tv;
         tv.tv_sec = 0;
         tv.tv_usec = 5;
         int maxfd = max(max_playerfd, listenfd) + 1;
-        select(maxfd, &fds, NULL, NULL, &tv);
+        select(maxfd, &fds, NULL, NULL, NULL);
         //printf("???\n");
         if(FD_ISSET(listenfd, &fds)){
             printf("New client detected.\n");
-            //reads username
             
             socklen_t len = sizeof(cliaddr);
             int connfd = accept(listenfd, (struct sockaddr*)&cliaddr, &len);
+            //FD_CLR(listenfd, &fds);
+            //FD_SET(connfd, &fds);
             if(player_count >= 5){
-                char* reject_message = "Too many players atm.\n";
-                read(connfd, buffer, sizeof(buffer));
-                write(connfd, reject_message, strlen(reject_message) + 1);
+                //char* reject_message = "Too many players atm.";
+                //read(connfd, buffer, sizeof(buffer));
+                //write(connfd, reject_message, strlen(reject_message));
                 close(connfd);
                 continue;
             }
             player_count++;
             FD_SET(connfd, &fds);
-            char* welcome_message = "Welcome to Guess the Word, please enter your username.";
+            char welcome_message[1024];
+            for(int a = 0; a < 1024; a++){
+                welcome_message[a] = '\0';
+            }
+            sprintf(welcome_message, "Welcome to Guess the Word, please enter your username.");
+            //welcome_message[strlen(welcome_message)] = '\0';
             printf("Welcome message sent.\n");
-            write(connfd, welcome_message, strlen(welcome_message) + 1);
+            send(connfd, welcome_message, strlen(welcome_message), 0);
+            for(int a = 0; a < 1025; a++){
+                buffer[a] = '\0';
+            }
+            //read username
             read(connfd, buffer, sizeof(buffer));
+            FD_CLR(connfd, &fds);
             buffer[strlen(buffer) - 1] = '\0';
-            //check if username is used
+            printf("strlen of username is: %lu\n", strlen(buffer));
             bool name_used = false;
+            //check if username is used
             for(int a = 0; a < 5; a++){
                 if(!slot_available[a]){
                     if(strcmp(buffer, usernames[a]) == 0){
                         name_used = true;
                         char message[1025];
-                        strcpy(message, "Username ");
-                        strcat(message, buffer);
-                        strcat(message, " is already taken, please enter a different username");
-                        message[strlen(message)] = '\0';
-                        write(connfd, message, strlen(message) + 1);
+                        for(int c = 0; c < 1025; c++){
+                            message[c] = '\0';
+                        }
+                        sprintf(message, "Username %s is already taken, please enter a different username.", usernames[a]);
+                        //message[strlen(message)] = '\0';
+                        send(connfd, message, strlen(message), 0);
                         printf("Client requested a used username: %s\n", buffer);
                         break;
                     }
@@ -211,23 +233,37 @@ int main(int argc, char* argv[]){
                         slot_available[a] = false;
                         player_fds[a] = connfd;
                         free(usernames[a]);
+                        //printf("strlen is: %lu\n", strlen(buffer));
                         usernames[a] = calloc(strlen(buffer) + 1, sizeof(char));
-                        for(int b = 0; b < strlen(buffer); b++){
-                            usernames[a][b] = buffer[b];
-                        }
+                        sprintf(usernames[a], "%s", buffer);
                         usernames[a][strlen(buffer)] = '\0';
                         has_username[a] = true;
                         char message[1025];
-                        char str[3];
-                        sprintf(str, "%d", player_count);
-                        str[strlen(str)] = '\0';
-                        strcpy(message, "Let's start playing, ");
-                        strcat(message, usernames[a]);
-                        strcat(message, "\nThere are ");
-                        strcat(message, str);
-                        strcat(message, " player(s) playing.\n");
-                        message[strlen(message)] = '\0';
-                        write(connfd, message, strlen(message) + 1);
+                        for(int c = 0; c < 1025; c++){
+                            message[c] = '\0';
+                        }
+                        sprintf(message, "Let's start playing, %s", usernames[a]);
+                        //printf("\n?\n");
+                        /*
+                        printf("?\n");
+                        int fuckyou = 0;
+                        while(message[fuckyou] != '\0'){
+                            printf("%d\n", message[fuckyou] - '\0');
+                            fuckyou++;
+                        }
+                        printf("strlen: %lu\n", strlen(message));
+                        */
+                        //message[strlen(message)] = '\0';
+                        send(connfd, message, strlen(message), 0);
+                        usleep(10);
+                        char message2[1025];
+                        for(int c = 0; c < 1025; c++){
+                            message2[c] = '\0';
+                        }
+                        sprintf(message2, "There are %d player(s) playing. The secret word is %lu letter(s).", player_count, strlen(secret));
+                        //printf("\n?\n");
+                        //message2[strlen(message2)] = '\0';
+                        send(connfd, message2, strlen(message2), 0);
                         //strcpy(prompt, "There are ");
                         
                         //write(player_fds[a], prompt, strlen(prompt) + 1);
@@ -251,11 +287,17 @@ int main(int argc, char* argv[]){
             if(!slot_available[a]){
                 if(FD_ISSET(player_fds[a], &fds)){
                     //char recvline[MAXLINE];
+                    for(int c = 0; c < 1025; c++){
+                        buffer[c] = '\0';
+                    }
                     int bytes_read = read(player_fds[a], buffer, sizeof(buffer));
+                    FD_CLR(player_fds[a], &fds);
+                    buffer[strlen(buffer) - 1] = '\0';
                     printf("%d\n", bytes_read);
-                    if (bytes_read == 0){
+                    printf("length of guess word: %lu\n", strlen(buffer));
+                    if (bytes_read <= 0){
                         printf("Player %s disconnected.\n", usernames[a]);
-                        FD_CLR(player_fds[a], &fds);
+                        close(player_fds[a]);
                         player_fds[a] = -1;
                         slot_available[a] = true;
                         has_username[a] = false;
@@ -272,27 +314,65 @@ int main(int argc, char* argv[]){
                          */
                         
                         
-                        
+                        bool game_over = false;
                         printf("User %s (%d) has guessed: %s\n", usernames[a], a, buffer);
-                        char message[1024];
-                        strcpy(message, "this is some message\n");
-                        //message[strlen(message)] = '\0';
-                        write(player_fds[a], message, strlen(message) + 1);
+                        
+                        struct match_number result = word_match(secret, buffer);
+                        
+                        
+                        char message[2048];
+                        for(int c = 0 ; c < 2048; c++){
+                            message[c] = '\0';
+                        }
+                        if(result.correct == -1){
+                            sprintf(message, "Invalid guess length. The secret word is %lu letter(s).", strlen(secret));
+                            //message[strlen(message)] = '\0';
+                            send(player_fds[a], message, strlen(message), 0);
+                            continue;
+                        }
+                        else if(result.place_correct == strlen(secret)){
+                            sprintf(message, "%s has correctly guessed the word %s", usernames[a], secret);
+                            free(secret);
+                            secret = get_secret(dic, dic_size);
+                            printf("Game over, new word (%s) has been selected.\n", secret);
+                            game_over = true;
+                        }
+                        else{
+                            sprintf(message, "%s guessed %s: %d letter(s) were correct and %d letter(s) were correctly placed.", usernames[a], buffer, result.correct, result.place_correct);
+                            //message[strlen(message)] = '\0';
+                        }
+                        for(int b = 0; b < 5; b++){
+                            if(has_username[b]){
+                                //message[strlen(message)] = '\0';
+                                send(player_fds[b], message, strlen(message), 0);
+                                if(game_over){
+                                    close(player_fds[b]);
+                                    player_fds[b] = -1;
+                                    slot_available[b] = true;
+                                    has_username[b] = false;
+                                    player_count--;
+                                }
+                                //FD_CLR(player_fds[b], &fds);
+                            }
+                        }
                     }
                     else{
-                        read(player_fds[a], buffer, sizeof(buffer));
-                        buffer[strlen(buffer)] = '\0';
+                        //read(player_fds[a], buffer, sizeof(buffer));
+                        //buffer[strlen(buffer)] = '\0';
                         bool name_used = false;
                         for(int b = 0; b < 5; a++){
                             if(!slot_available[b]){
                                 if(strcmp(buffer, usernames[b]) == 0){
                                     name_used = true;
                                     char message[1025];
+                                    for(int c = 0; c < 1025; c++){
+                                        message[c] = '\0';
+                                    }
                                     strcpy(message, "Username ");
                                     strcat(message, buffer);
-                                    strcat(message, " is already taken, please enter a different username");
-                                    message[strlen(message)] = '\0';
-                                    write(player_fds[a], message, strlen(message) + 1);
+                                    strcat(message, " is already taken, please enter a different username.");
+                                    //message[strlen(message)] = '\0';
+                                    send(player_fds[a], message, strlen(message), 0);
                                     printf("Client requested a used username: %s\n", buffer);
                                     break;
                                 }
@@ -302,22 +382,31 @@ int main(int argc, char* argv[]){
                             printf("New user (%s) has joined.\n", buffer);
                             free(usernames[a]);
                             usernames[a] = calloc(strlen(buffer) + 1, sizeof(char));
-                            for(int b = 0; b < strlen(buffer); b++){
-                                usernames[a][b] = buffer[b];
-                            }
+                            sprintf(usernames[a], "%s", buffer);
                             usernames[a][strlen(buffer)] = '\0';
                             has_username[a] = true;
                             char message[1025];
-                            char str[3];
-                            sprintf(str, "%d", player_count);
-                            str[strlen(str)] = '\0';
-                            strcpy(message, "Let's start playing, ");
-                            strcat(message, usernames[a]);
-                            strcat(message, "\nThere are ");
-                            strcat(message, str);
-                            strcat(message, " player(s) playing.\n");
-                            message[strlen(message)] = '\0';
-                            write(player_fds[a], message, strlen(message) + 1);
+                            for(int c = 0; c < 1025; c++){
+                                message[c] = '\0';
+                            }
+                            sprintf(message, "Let's start playing, %s", usernames[a]);
+                            /*
+                            int fuckyou = 0;
+                            printf("114514");
+                            while(message[fuckyou] != '\0'){
+                                printf("%d\n", message[fuckyou] - '\0');
+                                fuckyou++;
+                            }
+                             */
+                            //message[strlen(message)] = '\0';
+                            send(player_fds[a], message, strlen(message), 0);
+                            char message2[1025];
+                            for(int c = 0; c < 1025; c++){
+                                message2[c] = '\0';
+                            }
+                            sprintf(message2, "There are %d player(s) playing. The secret word is %lu letter(s).", player_count, strlen(secret));
+                            //message2[strlen(message2)] = '\0';
+                            send(player_fds[a], message2, strlen(message2), 0);
                         }
                     }
                 }
