@@ -317,7 +317,8 @@ int main(int argc, char* argv[]){
                         }
                         sprintf(message, "Let's start playing, %s", usernames[a]);
                         send(connfd, message, strlen(message), 0);
-                        usleep(10);
+                        //fighting against a random bug on submitty
+                        usleep(100);
                         char message2[1025];
                         for(int c = 0; c < 1025; c++){
                             message2[c] = '\0';
@@ -483,6 +484,8 @@ int main(int argc, char* argv[]){
                             }
                             sprintf(message, "Let's start playing, %s", usernames[a]);
                             send(player_fds[a], message, strlen(message), 0);
+                            //fighting against a random bug on submitty
+                            usleep(100);
                             char message2[1025];
                             for(int c = 0; c < 1025; c++){
                                 message2[c] = '\0';
